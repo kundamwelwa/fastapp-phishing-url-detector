@@ -1,4 +1,5 @@
 from datetime import timedelta
+from aipredictor import predict_url
 from fastapi import FastAPI, Depends, HTTPException, Request, Form, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles

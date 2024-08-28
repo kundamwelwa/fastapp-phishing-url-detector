@@ -1,79 +1,50 @@
-{% extends "base.html" %} {% block title %}Home Page{% endblock %} {% block
-content %}
-<div class="d-flex flex-column">
-  <h1>AI Phishing Website Detector</h1>
-  <!-- Vertically centered modal -->
-  <!-- Modal -->
-  <div
-    class="modal fade"
-    id="myModal"
-    data-bs-backdrop="static"
-    data-bs-keyboard="false"
-    tabindex="-1"
-    aria-labelledby="staticBackdropLabel"
-    aria-hidden="true"
-  >
+{% extends "base.html" %} 
+{% block title %}Home Page{% endblock %} 
+{% block content %}
+<div class="d-flex flex-column align-items-center mt-5">
+  <h1 style="font-family: 'Poppins', sans-serif; color: #343a40;">SMART PHISHING URL DETECTOR</h1>
+
+  <!-- Modal for Results -->
+  <div class="modal fade" id="myModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h1 class="modal-title fs-5" id="staticBackdropLabel">
-            Phishing Website Detector Result
-          </h1>
+          <h1 class="modal-title fs-5" id="staticBackdropLabel">RESULTS</h1>
         </div>
-        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-body text-center" id="modal-body"></div>
         <div class="modal-footer">
-          <button
-            id="modal-close-btn"
-            type="button"
-            class="btn btn-secondary"
-            data-bs-dismiss="modal"
-          >
-            Close
-          </button>
+          <button id="modal-close-btn" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         </div>
       </div>
     </div>
   </div>
-  <div class="container p-3 rounded-2" style="background-color: #777681a8">
-    <h3>Enter a link to get started</h3>
-    <!-- <form onsubmit="onSubmit()" > -->
-    <div class="row g-3 pt-4">
-      <input
-        class="form-control"
-        type="text"
-        name="url"
-        id="url"
-        required
-        placeholder="Enter website link"
-      />
-      <button type="submit" class="btn btn-primary" id="detect">Detect</button>
-      <!-- </form> -->
-      <div id="progress">
-        <div
-          class="progress"
-          role="progressbar"
-          aria-label="Default striped example"
-          aria-valuenow="10"
-          aria-valuemin="0"
-          aria-valuemax="100"
-        >
-          <div
-            id="progress-bar"
-            class="progress-bar progress-bar-striped progress"
-            style="width: 10%"
-          ></div>
+
+  <!-- URL Detection Card -->
+  <div class="card shadow-lg p-4 mt-4" style="max-width: 600px; width: 100%; border-radius: 10px;">
+    <h3 class="text-center mb-4" style="font-family: 'Poppins', sans-serif; color: #343a40;">Enter a Link to Get Started</h3>
+    <div class="row g-3">
+      <div class="col-12">
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
+          <input class="form-control" type="text" name="url" id="url" required placeholder="Enter website link" />
         </div>
+      </div>
+      <div class="col-12 text-center">
+        <button type="submit" class="btn btn-primary w-100" id="detect">Detect</button>
+      </div>
+    </div>
+    
+    <div id="progress" class="mt-4">
+      <div class="progress" role="progressbar" aria-label="Detection progress" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100">
+        <div id="progress-bar" class="progress-bar progress-bar-striped progress" style="width: 10%;"></div>
       </div>
     </div>
   </div>
 </div>
-<script>
-  const myModal = new bootstrap.Modal("#myModal", {
-    keyboard: false,
-  });
 
+<script>
+  const myModal = new bootstrap.Modal("#myModal", { keyboard: false });
   const detectBtn = document.getElementById("detect");
-  const modal = document.getElementById("myModal");
   const modalBody = document.getElementById("modal-body");
   const modalCloseBtn = document.getElementById("modal-close-btn");
   const inputValue = document.getElementById("url");
@@ -87,64 +58,67 @@ content %}
     });
   }
 
+  function simulateProgress() {
+    progressBar.style.width = "10%";
+    setTimeout(() => progressBar.style.width = "30%", 500);
+    setTimeout(() => progressBar.style.width = "60%", 1000);
+    setTimeout(() => progressBar.style.width = "80%", 1500);
+    setTimeout(() => progressBar.style.width = "100%", 2000);
+  }
+
   async function detectUrl(url) {
-    let data = await axios
-      .get("http://127.0.0.1:8000/detect/", {
-        params: {
-          url: url,
-        },
-      })
-      .then((res) => {
-        return res;
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-    return data;
+    try {
+      const response = await axios.get("http://127.0.0.1:8000/detect/", { params: { url: url } });
+      return response;
+    } catch (error) {
+      console.error("Error during detection:", error);
+      return null;
+    }
   }
 
   function isValidUrl(url) {
-    const urlRegex =
-      /^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/;
-
+    const urlRegex = /^(https?:\/\/)?([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(:[0-9]{1,5})?(\/.*)?$/;
     return urlRegex.test(url);
   }
 
   displayProgress(false);
 
   detectBtn.onclick = async function () {
-    const input = inputValue.value;
+    const input = inputValue.value.trim();
     if (!input || !isValidUrl(input)) {
-      myModal.show(modal);
-      modalBody.textContent = "Please enter a valid URL.";
+      modalBody.innerHTML = `<div class="text-danger">⚠️ Please enter a valid URL.</div>`;
+      myModal.show();
       return;
     }
 
     displayProgress(true);
-    progressBar.style.width = "0%"; // Reset the progress bar
-    progressBar.classList.remove("bg-danger", "bg-success"); // Reset progress bar color
-
-    progressBar.style.width = "10%"; // Set initial progress bar value
-    // await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate some initial delay
-    progressBar.style.width = "50%"; // Update progress bar value
+    simulateProgress();
 
     const response = await detectUrl(input);
-    progressBar.style.width = "100%"; // Complete progress bar
 
     if (response) {
-      if (response.data === "phishing") {
-        progressBar.classList.add("bg-danger");
-      } else if (response.data === "legitimate") {
-        progressBar.classList.add("bg-success");
-      }
-      myModal.show(modal);
-      modalBody.textContent = response.data;
+      const result = response.data;
+      const isPhishing = result === "phishing";
+      const additionalInfo = isPhishing
+        ? `<p>This site has been flagged as suspicious. Please avoid interacting with it.</p>`
+        : `<p>This site appears to be legitimate. Proceed with caution and ensure security practices.</p>`;
+
+      modalBody.innerHTML = isPhishing
+        ? `<div class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Warning: This is a phishing site!</div>${additionalInfo}`
+        : `<div class="text-success"><i class="bi bi-shield-check"></i> This site is legitimate.</div><a href="${input}" target="_blank" class="btn btn-primary mt-3">Visit Site</a>${additionalInfo}`;
+      
+      progressBar.classList.add(isPhishing ? "bg-danger" : "bg-success");
+    } else {
+      modalBody.innerHTML = `<div class="text-danger">⚠️ An error occurred. Please try again.</div>`;
     }
+
+    myModal.show();
   };
 
   modalCloseBtn.onclick = function () {
     displayProgress(false);
-    // inputValue.value =""
+    progressBar.style.width = "10%"; // Reset progress bar width
+    progressBar.classList.remove("bg-danger", "bg-success"); // Reset progress bar color
   };
 </script>
 {% endblock %}
