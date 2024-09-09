@@ -1,9 +1,11 @@
 body {
   width: 100vw;
   height: 100vh;
-  background-color: rgb(87, 255, 255);
+  background-color:rgb(235, 235, 235);
   background-repeat: no-repeat;
   background-size: cover;
+  background-position: center; /* Centers the image */
+  background-attachment: fixed; /* Keeps the background fixed while scrolling */
 }
 
 .h1{
@@ -23,4 +25,8 @@ body {
 .card{
   width: 500px;
   min-width: 300px;
+}
+
+.bottom{
+  content: center;
 }

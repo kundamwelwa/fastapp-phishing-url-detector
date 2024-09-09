@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Security Practices{% endblock %}
+
+{% block content %}
+  <div class="container mt-5">
+    <h2 class="text-center mb-4" style="font-family: 'Poppins', sans-serif; color: #343a40;">Security Practices to Stay Safe Online</h2>
+
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+      <!-- Card 1: Strong Passwords -->
+      <div class="col">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title"><i class="bi bi-shield-lock-fill"></i> Use Strong Passwords</h5>
+            <p class="card-text">
+              Ensure your passwords are unique, complex, and at least 12 characters long. Use a mix of letters, numbers, and special characters. Consider using a password manager to keep track of your passwords.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Avoid Suspicious Links -->
+      <div class="col">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title"><i class="bi bi-link-45deg"></i> Avoid Suspicious Links</h5>
+            <p class="card-text">
+              Never click on links or download attachments from unknown or unexpected emails or messages. Always verify the source before interacting with any online content.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Enable Two-Factor Authentication -->
+      <div class="col">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title"><i class="bi bi-shield-check"></i> Enable Two-Factor Authentication (2FA)</h5>
+            <p class="card-text">
+              Use 2FA wherever possible to add an extra layer of security to your accounts. This ensures that even if your password is compromised, your account remains protected.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Keep Software Updated -->
+      <div class="col">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title"><i class="bi bi-arrow-repeat"></i> Keep Your Software Updated</h5>
+            <p class="card-text">
+              Regularly update your operating system, browser, and apps to ensure you have the latest security patches and fixes, reducing vulnerabilities to attacks.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Detect Button -->
+  {% if current_user %}
+  <button class="fab" onclick="window.location.href='{{ url_for('index') }}';">Click Here to Detect</button>
+  {% endif %}
+{% endblock %}
