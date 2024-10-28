@@ -4,5 +4,11 @@
     },
     "python.formatting.provider": "none",
     "sqltools.useNodeRuntime": true,
-    "sqltools.connections": []
+    "sqltools.connections": [],
+    "cSpell.words": [
+        "aipredictor",
+        "fastapi",
+        "iframe",
+        "xgboost"
+    ]
 }

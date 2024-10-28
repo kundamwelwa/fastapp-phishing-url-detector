@@ -1,20 +1,32 @@
 import pickle
-from featureExtractor import featureExtraction, checkIsOnline
 import numpy as np
+from featureExtractor import featureExtraction, checkIsOnline
+
+# Load the XGBoost model once outside the function for efficiency
+try:
+    model = pickle.load(open("XGBoostClassifier.pickle.dat", "rb"))
+except (FileNotFoundError, pickle.UnpicklingError) as e:
+    model = None
+    print(f"Error loading model: {e}")
 
 async def predict_url(url: str) -> str:
-    # Load the XGBoost model
-    model = pickle.load(open("XGBoostClassifier.pickle.dat", "rb"))
+    if model is None:
+        return "Model could not be loaded!"
 
-    if checkIsOnline():
+    try:
+        # Check online status
+        if not checkIsOnline():
+            return "An error occurred while connecting to the Internet!"
+
+        # Extract features and reshape for prediction
         feature = featureExtraction(url)
-        reshape_feature = np.reshape(feature, (1, -1))  # Reshape to match the model input
-        print(reshape_feature)
+        reshape_feature = np.reshape(feature, (1, -1))
+
+        # Predict phishing or legitimate
         prediction = model.predict(reshape_feature)
-        print(prediction)
-        if prediction[0] == 1:
-            return "phishing"
-        else:
-            return "legitimate"
-    else:
-        return "An error occurred while connecting to the Internet!"
+
+        return "phishing" if prediction[1] == 0 else "legitimate"
+    
+    except Exception as e:
+        print(f"Error in prediction: {e}")
+        return "An error occurred during prediction!"

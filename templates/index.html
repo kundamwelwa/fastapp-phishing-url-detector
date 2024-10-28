@@ -2,8 +2,6 @@
 {% block title %}Home Page{% endblock %}
 {% block content %}
 <div class="d-flex flex-column align-items-center mt-5">
-
-
     <!-- Modal for Results -->
     <div class="modal fade" id="myModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -51,7 +49,11 @@
 
     <!-- HTTPS Warning Section -->
     <div id="https-warning" class="alert alert-warning mt-4" role="alert" style="display: none;">
-        <i class="bi bi-exclamation-triangle-fill"></i> Warning: The URL is not using HTTPS, which might be less secure. However, it doesn't necessarily mean it is a phishing site.
+        <i class="bi bi-exclamation-triangle-fill"></i> Note: The URL is not HTTPS secure (HTTP).
+    </div>
+
+    <div id="ssl-error" class="alert alert-danger mt-4" role="alert" style="display: none;">
+        <i class="bi bi-exclamation-triangle-fill"></i> SSL Error: The site has an invalid certificate.
     </div>
 
     <!-- History Section -->
@@ -66,116 +68,130 @@
 </div>
 
 <script>
-  const myModal = new bootstrap.Modal("#myModal", { keyboard: false });
-  const detectBtn = document.getElementById("detect");
-  const clearBtn = document.getElementById("clear");
-  const modalBody = document.getElementById("modal-body");
-  const modalCloseBtn = document.getElementById("modal-close-btn");
-  const inputValue = document.getElementById("url");
-  const progressBar = document.getElementById("progress-bar");
-  const progress = document.querySelectorAll(".progress");
-  const spinner = document.getElementById("spinner");
-  const httpsWarning = document.getElementById("https-warning");
-  const recentChecks = document.getElementById("recent-checks");
-
-  function displayProgress(value) {
-      progress.forEach((i) => {
-          if (value) i.style.display = "flex";
-          else i.style.display = "none";
-      });
-      spinner.style.display = value ? "block" : "none";
-  }
-
-  function simulateProgress() {
-      progressBar.style.width = "10%";
-      setTimeout(() => progressBar.style.width = "30%", 500);
-      setTimeout(() => progressBar.style.width = "60%", 1000);
-      setTimeout(() => progressBar.style.width = "80%", 1500);
-      setTimeout(() => progressBar.style.width = "100%", 2000);
-  }
-
-  async function detectUrl(url) {
-      try {
-          const response = await axios.get("http://127.0.0.1:8000/detect/", { params: { url: url } });
-          return response.data;  // Ensure response.data is used correctly
-      } catch (error) {
-          console.error("Error during detection:", error);
-          return null;
-      }
-  }
-
-  function isValidUrl(url) {
-      const urlRegex = /^(https?:\/\/)?([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(:[0-9]{1,5})?(\/.*)?$/;
-      return urlRegex.test(url);
-  }
-
-  function checkHttps(url) {
-      return url.startsWith("https://");
-  }
-
-  function addToRecentChecks(url, result) {
-      // Clear any existing header or unwanted content from the list
-      recentChecks.innerHTML = recentChecks.innerHTML;  // Re-render the list without any unwanted header
-      
-      const listItem = document.createElement("li");
-      listItem.className = "list-group-item";
-      listItem.innerHTML = `<strong>${url}</strong>: ${result}`;
-      recentChecks.prepend(listItem);
-  }
-
-  displayProgress(false);
-
-  detectBtn.onclick = async function () {
-      const input = inputValue.value.trim();
-      if (!input || !isValidUrl(input)) {
-          modalBody.innerHTML = `<div class="text-danger">⚠️ Please enter a valid URL.</div>`;
-          myModal.show();
-          return;
-      }
-
-      displayProgress(true);
-      simulateProgress();
-
-      // Check if URL is HTTPS and show warning if not
-      if (!checkHttps(input)) {
-          httpsWarning.style.display = "block";
-      } else {
-          httpsWarning.style.display = "none";
-      }
-
-      const result = await detectUrl(input);
-
-      if (result) {
-          const isPhishing = result === "phishing";
-          const additionalInfo = isPhishing
-              ? `<p>This site has been flagged as suspicious. Please avoid interacting with it.</p>`
-              : `<p>This site appears to be legitimate. Proceed with caution and ensure security practices.</p>`;
-
-          modalBody.innerHTML = isPhishing
-              ? `<div class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Warning: This is a phishing site!</div>${additionalInfo}`
-              : `<div class="text-success"><i class="bi bi-shield-check"></i> This site is legitimate.</div><a href="${input}" target="_blank" class="btn btn-primary mt-3">Visit Site</a>${additionalInfo}`;
-
-          progressBar.classList.add(isPhishing ? "bg-danger" : "bg-success");
-
-          // Add the check result to the history
-          addToRecentChecks(input, result);
-      } else {
-          modalBody.innerHTML = `<div class="text-danger">⚠️ An error occurred. Please try again.</div>`;
-      }
-
-      displayProgress(false);
-      myModal.show();
-  };
-
-  clearBtn.onclick = function () {
-      inputValue.value = "";
-      httpsWarning.style.display = "none";
-      progressBar.style.width = "10%";
-      progressBar.classList.remove("bg-danger", "bg-success");
-  };
-
-  modalCloseBtn.onclick = function () {
-      clearBtn.click();  // Trigger clear button to reset the form and UI
-  };
+    const myModal = new bootstrap.Modal("#myModal", { keyboard: false });
+    const detectBtn = document.getElementById("detect");
+    const clearBtn = document.getElementById("clear");
+    const modalBody = document.getElementById("modal-body");
+    const modalCloseBtn = document.getElementById("modal-close-btn");
+    const inputValue = document.getElementById("url");
+    const progressBar = document.getElementById("progress-bar");
+    const progress = document.querySelectorAll(".progress");
+    const spinner = document.getElementById("spinner");
+    const httpsWarning = document.getElementById("https-warning");
+    const sslError = document.getElementById("ssl-error");
+    const recentChecks = document.getElementById("recent-checks");
+  
+    function displayProgress(value) {
+        progress.forEach((i) => {
+            if (value) i.style.display = "flex";
+            else i.style.display = "none";
+        });
+        spinner.style.display = value ? "block" : "none";
+    }
+  
+    function simulateProgress() {
+        progressBar.style.width = "10%";
+        setTimeout(() => progressBar.style.width = "30%", 500);
+        setTimeout(() => progressBar.style.width = "60%", 1000);
+        setTimeout(() => progressBar.style.width = "80%", 1500);
+        setTimeout(() => progressBar.style.width = "100%", 2000);
+    }
+  
+    async function detectUrl(url) {
+        try {
+            const response = await axios.get("http://127.0.0.1:8000/detect/", { params: { url: url } });
+            return response.data;
+        } catch (error) {
+            console.error("Error during detection:", error);
+            return null;
+        }
+    }
+  
+    function isValidUrl(url) {
+        const urlRegex = /^(https?:\/\/)?([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(:[0-9]{1,5})?(\/.*)?$/;
+        return urlRegex.test(url);
+    }
+  
+    function checkHttps(url) {
+        return url.startsWith("https://");
+    }
+  
+    function addToRecentChecks(url, result) {
+        const listItem = document.createElement("li");
+        listItem.className = "list-group-item";
+        listItem.innerHTML = `<strong>${url}</strong>: ${result}`;
+        recentChecks.prepend(listItem);
+    }
+  
+    displayProgress(false);
+  
+    detectBtn.onclick = async function () {
+        const input = inputValue.value.trim();
+        if (!input || !isValidUrl(input)) {
+            modalBody.innerHTML = `<div class="text-danger">⚠️ Please enter a valid URL.</div>`;
+            myModal.show();
+            return;
+        }
+    
+        displayProgress(true);
+        simulateProgress();
+    
+        // Reset warnings
+        httpsWarning.style.display = "none";
+        sslError.style.display = "none";
+    
+        // Check if URL is HTTPS and show warning if not
+        const isHttps = checkHttps(input);
+        if (!isHttps) {
+            httpsWarning.style.display = "block";
+        }
+    
+        // Proceed with phishing detection only for valid URLs
+        const result = await detectUrl(input);
+    
+        if (result) {
+            const isPhishing = result === "phishing";
+            const sslErrorDetected = result.ssl_error || false; // Assuming your API returns an SSL error flag
+    
+            // Display phishing detection results
+            if (sslErrorDetected) {
+                sslError.style.display = "block";
+                modalBody.innerHTML = `<div class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Warning: This site has an invalid certificate.</div>
+                                       <p>Please avoid interacting with this site.</p>`;
+            } else if (!isHttps) {
+                modalBody.innerHTML = `<div class="text-warning"><i class="bi bi-exclamation-triangle-fill"></i> Note: The URL is not HTTPS secure (HTTP).</div>
+                                       <p>Please avoid interacting with this site.</p>`;
+            } else {
+                modalBody.innerHTML = isPhishing
+                    ? `<div class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Warning: This is a phishing site!</div>
+                       <p>This site has been flagged as suspicious. Please avoid interacting with it.</p>`
+                    : `<div class="text-success"><i class="bi bi-shield-check"></i> This site is legitimate.</div>
+                       <a href="${input}" target="_blank" class="btn btn-primary mt-3">Visit Site</a>
+                       <p>This site appears to be legitimate. Proceed with caution and ensure security practices.</p>`;
+            }
+    
+            progressBar.classList.add(isPhishing ? "bg-danger" : "bg-success");
+            addToRecentChecks(input, result);
+        } else {
+            modalBody.innerHTML = `<div class="text-danger">⚠️ An error occurred. Please try again.</div>`;
+        }
+    
+        displayProgress(false);
+        myModal.show();
+    };
+    
+  
+    clearBtn.onclick = function () {
+        inputValue.value = "";
+        httpsWarning.style.display = "none";
+        sslError.style.display = "none";
+        progressBar.style.width = "10%";
+        progressBar.classList.remove("bg-danger", "bg-success");
+    };
+  
+    modalCloseBtn.onclick = function () {
+        clearBtn.click();
+    };
 </script>
+  
 {% endblock %}

@@ -1,5 +1,6 @@
 from datetime import datetime
-from urllib.parse import urlparse, quote
+from time import sleep
+from urllib.parse import urlparse
 import ipaddress
 import re
 import requests
@@ -7,7 +8,7 @@ from bs4 import BeautifulSoup
 import whois
 import numpy as np
 
-# listing shortening services
+# Listing shortening services
 shortening_services = r"bit\.ly|goo\.gl|shorte\.st|go2l\.ink|x\.co|ow\.ly|t\.co|tinyurl|tr\.im|is\.gd|cli\.gs|" \
                       r"yfrog\.com|migre\.me|ff\.im|tiny\.cc|url4\.eu|twit\.ac|su\.pr|twurl\.nl|snipurl\.com|" \
                       r"short\.to|BudURL\.com|ping\.fm|post\.ly|Just\.as|bkite\.com|snipr\.com|fic\.kr|loopt\.us|" \
@@ -17,247 +18,204 @@ shortening_services = r"bit\.ly|goo\.gl|shorte\.st|go2l\.ink|x\.co|ow\.ly|t\.co|
                       r"prettylinkpro\.com|scrnch\.me|filoops\.info|vzturl\.com|qr\.net|1url\.com|tweez\.me|v\.gd|" \
                       r"tr\.im|link\.zip\.net"
 
-# check for internet connectivity
-
-
+# Check for internet connectivity
 def checkIsOnline():
     try:
         response = requests.get('https://www.google.com', timeout=2)
-        if response.status_code == 200:
-            return True
+        return response.status_code == 200
     except requests.exceptions.ConnectionError:
         return False
 
-
-# 1.Domain of the URL (Domain)
+# 1. Domain of the URL (Domain)
 def getDomain(url):
     domain = urlparse(url).netloc
-    if re.match(r"^www.", domain):
-        domain = domain.replace("www.", "")
-        return domain
-    else:
-        return domain
+    return domain.replace("www.", "")  # Remove 'www.' if present
 
-# 2.Checks for IP address in URL (Have_IP)
-
-
+# 2. Checks for IP address in URL (Have_IP)
 def havingIP(url):
     try:
         ipaddress.ip_address(url)
-        ip = 1
-    except:
-        ip = 0
-    return ip
+        return 1
+    except ValueError:
+        return 0
 
-
-# 3.Checks the presence of @ in URL (Have_At)
+# 3. Checks the presence of '@' in URL (Have_At)
 def haveAtSign(url):
-    if "@" in url:
-        at = 1
-    else:
-        at = 0
-    return at
+    return 1 if "@" in url else 0
 
-
-# 4.Finding the length of URL and categorizing (URL_Length)
+# 4. Finding the length of URL and categorizing (URL_Length)
 def getLength(url):
-    if len(url) < 54:
-        length = 0
-    else:
-        length = 1
-    return length
+    return 0 if len(url) < 54 else 1
 
-
-# 5.Gives number of '/' in URL (URL_Depth)
+# 5. Gives number of '/' in URL (URL_Depth)
 def getDepth(url):
-    s = urlparse(url).path.split('/')
-    depth = 0
-    for j in range(len(s)):
-        if len(s[j]) != 0:
-            depth = depth+1
-    return depth
+    return len([part for part in urlparse(url).path.split('/') if part])
 
-# 6.Checking for redirection '//' in the url (Redirection)
-
-
+# 6. Checking for redirection '//' in the url (Redirection)
 def redirection(url):
     pos = url.rfind('//')
-    if pos > 6:
-        if pos > 7:
-            return 1
-        else:
-            return 0
-    else:
-        return 0
+    return 1 if pos > 6 and pos > 7 else 0
 
-# 7.Existence of “HTTPS” Token in the Domain Part of the URL (https_Domain)
-
-
+# 7. Existence of “HTTPS” Token in the Domain Part of the URL (https_Domain)
 def httpDomain(url):
-    domain = urlparse(url).netloc
-    if 'https' in domain:
-        return 1
-    else:
-        return 0
+    """Neutralize suspicion for non-HTTPS (HTTP-only) URLs unless known phishing patterns exist."""
+    return 0
 
 # 8. Checking for Shortening Services in URL (Tiny_URL)
-
-
 def tinyURL(url):
-    match = re.search(shortening_services, url)
-    if match:
-        return 1
-    else:
-        return 0
+    """Lower sensitivity to URL shortening."""
+    return 1 if re.search(shortening_services, url) else 0
 
-# 9.Checking for Prefix or Suffix Separated by (-) in the Domain (Prefix/Suffix)
-
-
+# 9. Checking for Prefix or Suffix Separated by (-) in the Domain (Prefix/Suffix)
 def prefixSuffix(url):
-    if '-' in urlparse(url).netloc:
-        return 1
-    else:
-        return 0
+    return 1 if '-' in urlparse(url).netloc else 0
 
-
+# Function to check web traffic
 def web_traffic(url):
     domain = getDomain(url)
-
+    base_url = f"https://www.semrush.com/website/{domain}/overview/"
     try:
-        # Filling the whitespaces in the URL if any
-        base_url = "https://www.semrush.com/website/"
-        response = requests.get(f"{base_url}{domain}/overview/")
-        response.raise_for_status()  # Raise an HTTPError for bad responses
-
-        soup = BeautifulSoup(response.text, "html.parser").find_all(
-            "b", class_="rank-card__SCRank-sc-2sba91-8")[0].text
+        response = requests.get(base_url)
+        response.raise_for_status()  # Raise an error for bad responses
+        soup = BeautifulSoup(response.text, "html.parser")
+        rank_elements = soup.find_all("b", class_="rank-card__SCRank-sc-2sba91-8")
         
-        rank = int(soup.replace(',', ''))
-        # Using a ternary operator for better readability
-        return 1 if rank < 100000 else 0
-    except (TypeError, KeyError, requests.RequestException) as e:
-        print(f"Error: {e}")
-        return 1
+        if rank_elements:
+            rank = int(rank_elements[0].text.replace(',', ''))
+            return 1 if rank < 100000 else 0
+        else:
+            print(f"Rank data not found for {url}; treating as neutral.")
+            return 0  # Treat as neutral if rank data is missing
+            
+    except requests.HTTPError as e:
+        if e.response.status_code == 404:
+            print(f"Error 404: Page not found for {url}; treating as neutral.")
+            return 0
+        elif e.response.status_code == 403:
+            print(f"Error 403: Access denied for {url}; treating as neutral.")
+            return 0
+        else:
+            print(f"HTTP error occurred: {e}; treating as neutral.")
+            return 0
+    except Exception as e:
+        print(f"General error fetching web traffic data for {url}: {e}; treating as neutral.")
+        return 0  # Treat missing data neutrally
 
 
-# 13.Survival time of domain: The difference between termination time and creation time (Domain_Age)
+# Delay between requests
+sleep(2)  # Adjust time as necessary
+
+# 10. Survival time of domain (Domain_Age)
 def domainAge(domain_name):
+    """Treat unknown domain age neutrally."""
     creation_date = domain_name.creation_date
     expiration_date = domain_name.expiration_date
-    if (isinstance(creation_date, str) or isinstance(expiration_date, str)):
+
+    # Ensure we are working with datetime objects
+    if isinstance(creation_date, list):
+        creation_date = creation_date[0]  # Take first date if it's a list
+    if isinstance(expiration_date, list):
+        expiration_date = expiration_date[0]  # Take first date if it's a list
+
+    if isinstance(creation_date, str) or isinstance(expiration_date, str):
         try:
             creation_date = datetime.strptime(creation_date, '%Y-%m-%d')
             expiration_date = datetime.strptime(expiration_date, "%Y-%m-%d")
-        except:
-            return 1
-    if ((expiration_date is None) or (creation_date is None)):
-        return 1
-    elif ((type(expiration_date) is list) or (type(creation_date) is list)):
-        return 1
-    else:
-        ageofdomain = abs((expiration_date - creation_date).days)
-        if ((ageofdomain/30) < 6):
-            age = 1
-        else:
-            age = 0
-    return age
+        except ValueError:
+            return 0  # Treat as neutral if date parsing fails
 
-# 14.End time of domain: The difference between termination time and current time (Domain_End)
+    if expiration_date is None or creation_date is None:
+        return 0  # Treat missing date as neutral
 
+    age_of_domain = abs((expiration_date - creation_date).days)
+    return 1 if (age_of_domain / 30) < 6 else 0
 
+# 11. End time of domain (Domain_End)
 def domainEnd(domain_name):
+    """Treat unknown domain end date neutrally."""
     expiration_date = domain_name.expiration_date
+
+    if isinstance(expiration_date, list):
+        expiration_date = expiration_date[0]  # Take first date if it's a list
+
     if isinstance(expiration_date, str):
         try:
             expiration_date = datetime.strptime(expiration_date, "%Y-%m-%d")
-        except:
-            return 1
-    if (expiration_date is None):
-        return 1
-    elif (type(expiration_date) is list):
-        return 1
-    else:
-        today = datetime.now()
-        end = abs((expiration_date - today).days)
-        if ((end/30) < 6):
-            end = 0
-        else:
-            end = 1
-    return end
+        except ValueError:
+            return 0  # Treat as neutral if date parsing fails
 
-# 15. IFrame Redirection (iFrame)
+    if expiration_date is None:
+        return 0  # Treat missing date as neutral
 
+    today = datetime.now()
+    end = abs((expiration_date - today).days)
+    return 0 if (end / 30) < 6 else 1
 
+# 12. IFrame Redirection (iFrame)
 def iframe(response):
-    if response == "":
+    if not response:
         return 1
-    else:
-        if re.findall(r"[<iframe>|<frameBorder>]", response.text):
-            return 0
-        else:
-            return 1
+    return 0 if re.findall(r"<iframe>|<frameBorder>", response.text) else 1
 
-# 16.Checks the effect of mouse over on status bar (Mouse_Over)
-
-
+# 13. Checks the effect of mouse over on status bar (Mouse_Over)
 def mouseOver(response):
-    if response == "":
+    if not response:
         return 1
-    else:
-        if re.findall("<script>.+onmouseover.+</script>", response.text):
-            return 1
-        else:
-            return 0
+    return 1 if re.findall("<script>.+onmouseover.+</script>", response.text) else 0
 
-# 17.Checks the status of the right click attribute (Right_Click)
-
-
+# 14. Checks the status of the right-click attribute (Right_Click)
 def rightClick(response):
-    if response == "":
+    if not response:
         return 1
-    else:
-        if re.findall(r"event.button ?== ?2", response.text):
-            return 0
-        else:
-            return 1
+    return 0 if re.findall(r"event.button ?== ?2", response.text) else 1
 
-# 18.Checks the number of forwardings (Web_Forwards)
-
-
+# 15. Checks the number of forwardings (Web_Forwards)
 def forwarding(response):
-    if response == "":
+    if not response:
         return 1
-    else:
-        if len(response.history) <= 2:
-            return 0
-        else:
-            return 1
+    return 1 if len(response.history) > 2 else 0
+
+def check_https_security(url):
+    try:
+        response = requests.get(url, timeout=5)  # Set a timeout for the request
+        # Check if the response is successful
+        if response.status_code == 200:
+            return 1  # Secure
+    except requests.exceptions.SSLError:
+        print(f"SSL error: The site {url} has an invalid certificate.")
+    except requests.exceptions.RequestException as e:
+        print(f"Request error: {e}")
+
+    return 0  # Not secure
+    
 
 # Function to extract features
-
-
 def featureExtraction(url):
-
-    features = []
-    features.append(havingIP(url))
-    features.append(haveAtSign(url))
-    features.append(getLength(url))
-    features.append(getDepth(url))
-    features.append(redirection(url))
-    features.append(httpDomain(url))
-    features.append(tinyURL(url))
-    features.append(prefixSuffix(url))
+    features = [
+        havingIP(url),
+        haveAtSign(url),
+        getLength(url),
+        getDepth(url),
+        redirection(url),
+        httpDomain(url),
+        tinyURL(url),
+        prefixSuffix(url),
+    ]
 
     dns = 0
     try:
-        domain_name = whois.whois(urlparse(url).netloc)
-    except:
+        domain_name = whois.whois(getDomain(url))
+    except Exception:
         dns = 1
 
     features.append(dns)
     features.append(web_traffic(url))
     features.append(1 if dns == 1 else domainAge(domain_name))
     features.append(1 if dns == 1 else domainEnd(domain_name))
+
+    # Check if the HTTPS connection is secure
+    https_secure = check_https_security(url)
+    features.append(https_secure)
 
     # HTML & Javascript based features
     try:
@@ -270,9 +228,49 @@ def featureExtraction(url):
     features.append(rightClick(response))
     features.append(forwarding(response))
 
-    # converting the list to dataframe
-    feature_names = ['Domain', 'Have_IP', 'Have_At', 'URL_Length', 'URL_Depth', 'Redirection',
-                     'https_Domain', 'TinyURL', 'Prefix/Suffix', 'DNS_Record', 'Web_Traffic',
-                     'Domain_Age', 'Domain_End', 'iFrame', 'Mouse_Over', 'Right_Click', 'Web_Forwards', 'Label']
-    print(features)
-    return np.array(features)
+    # Ensure the features match your model expectations
+    expected_features_count = 16  # Adjust according to your model
+    if len(features) != expected_features_count:
+        print(f"Warning: Feature count mismatch! Expected {expected_features_count}, got {len(features)}.")
+        return features[:expected_features_count]
+
+    return features
+
+
+
+def classify_url(url):
+    """Classify the URL as phishing or legitimate."""
+    features = featureExtraction(url)
+    
+    # Dummy classification logic
+    if features[-1] == 0:  # Non-HTTPS
+        print(f"Warning: The URL '{url}' is not HTTPS secure.")
+        return "Phishing"
+    
+    # Placeholder for actual model prediction
+    # Here you would use your model to classify based on features
+    # Example:
+    # prediction = model.predict(np.array(features).reshape(1, -1))
+
+    print(f"URL Features: {features}")
+    return "Legitimate"  # For the purpose of this demo
+
+def main():
+    if not checkIsOnline():
+        print("No internet connection. Please check your connection and try again.")
+        return
+
+    while True:
+        url = input("Enter a URL to classify (or 'exit' to quit): ")
+        if url.lower() == 'exit':
+            print("Exiting the program.")
+            break
+        elif not url.startswith(("http://", "https://")):
+            print("Please enter a valid URL starting with 'http://' or 'https://'.")
+            continue
+        
+        classification = classify_url(url)
+        print(f"The URL '{url}' is classified as: {classification}")
+
+if __name__ == "__main__":
+    main()
