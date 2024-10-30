@@ -1,10 +1,10 @@
 {% extends "base.html" %} 
 {% block title %}Login Page{% endblock %} 
 {% block content %}
-<div class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
-  <div class="card shadow-lg" style="width: 100%; max-width: 400px; border-radius: 15px; background-color: #ffffff;">
-    <div class="card-body p-4">
-      <h4 class="text-center mb-4" style="font-weight: 600;">Login to continue</h4>
+<div class="d-flex justify-content-center align-items-center vh-100">
+  <div class="card shadow-lg p-4" style="width: 100%; max-width: 400px; border-radius: 15px; background-color: rgba(255, 255, 255, 0.9);">
+    <div class="card-body">
+      <h4 class="text-center mb-4" style="font-weight: 600; color: #007bff;">Login to Continue</h4>
       <form action="/loginuser" method="post">
         <div class="mb-3">
           <label for="username" class="form-label">Username</label>
@@ -14,7 +14,7 @@
             name="username"
             placeholder="Enter your username"
             required
-            style="border-radius: 10px;"
+            style="border-radius: 8px;"
           />
         </div>
         <div class="mb-3">
@@ -25,12 +25,12 @@
             name="password"
             placeholder="Enter your password"
             required
-            style="border-radius: 10px;"
+            style="border-radius: 8px;"
           />
         </div>
-        <button type="submit" class="btn btn-primary btn-lg w-100" style="border-radius: 10px;">Login</button>
+        <button type="submit" class="btn btn-primary btn-lg w-100" style="border-radius: 8px;">Login</button>
         <p class="text-center mt-3">
-          <b>Don't have an account? <a href="/register" style="text-decoration: none; color: #007bff;">Register</a></b>
+          <b>Don't have an account? <a href="/register" class="text-decoration-none" style="color: #007bff;">Register</a></b>
         </p>
       </form>
     </div>

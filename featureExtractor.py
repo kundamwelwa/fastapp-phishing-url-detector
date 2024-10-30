@@ -16,8 +16,11 @@ shortening_services = r"bit\.ly|goo\.gl|shorte\.st|go2l\.ink|x\.co|ow\.ly|t\.co|
                       r"qr\.ae|adf\.ly|goo\.gl|bitly\.com|cur\.lv|tinyurl\.com|ow\.ly|bit\.ly|ity\.im|q\.gs|is\.gd|" \
                       r"po\.st|bc\.vc|twitthis\.com|u\.to|j\.mp|buzurl\.com|cutt\.us|u\.bb|yourls\.org|x\.co|" \
                       r"prettylinkpro\.com|scrnch\.me|filoops\.info|vzturl\.com|qr\.net|1url\.com|tweez\.me|v\.gd|" \
-                      r"tr\.im|link\.zip\.net"
+                      r"tr\.im|link\.zip\.net|rebrandly\.com|t2mio\.com|bl\.ink|shrtco\.de|t\.ly|hyperurl\.co|" \
+                      r"vrl\.me|tinycc\.com|clickmeter\.com|capsulink\.com|bit\.xyz|mcaf\.ee|sub2\.me|rb\.gy|" \
+                      r"lnk\.fi|bitlyservices\.com|zpr\.io|shorturl\.at|fml\.li|getpocket\.com|mstr\.cd"
 
+ 
 # Check for internet connectivity
 def checkIsOnline():
     try:

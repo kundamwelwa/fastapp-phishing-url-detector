@@ -1,32 +1,62 @@
-body {
-  width: 100vw;
-  height: 100vh;
-  background-color:rgb(235, 235, 235);
+/* Background side styling */
+#background-side {
+  background: linear-gradient(to right, hsla(196, 100%, 61%, 0.6), rgba(157, 157, 157, 0.5)), 
+              url('./resources/Phishing-Cover-Image.png'); /* Replace with your image path */
   background-repeat: no-repeat;
   background-size: cover;
-  background-position: center; /* Centers the image */
-  background-attachment: fixed; /* Keeps the background fixed while scrolling */
+  background-position: center;
+  height: 100vh;
+  width: 50vw;
 }
 
-.h1{
-  text-decoration: underline;
-  font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
-  font-style: bold;
+/* Content side styling */
+#content-side {
+  background-color: rgba(161, 215, 242, 0.95);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.content {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  height: 80%;
+/* Header and Navigation styling */
+.custom-header-title {
+  font-family: 'Poppins', sans-serif;
+  color: #021526; /* Dark blue color */
+  font-weight: bold;
+  font-size: 1.8rem;
 }
 
-.card{
-  width: 500px;
-  min-width: 300px;
+.text-dark-blue {
+  color: #021526; /* Dark blue for the welcome message */
 }
 
-.bottom{
-  content: center;
+.nav-link, .btn-outline-primary {
+  font-weight: 500;
+}
+
+/* Custom Button Styling */
+.btn-dark-blue {
+  background-color: #021526; /* Dark blue */
+  color: #ffffff;
+  border: none;
+  transition: border-radius 0.3s ease, background-color 0.3s ease;
+}
+
+.btn-dark-blue:hover {
+  background-color: #01213a; /* Darker shade of blue for hover effect */
+  color: #ffffff;
+  border-radius: 8px; /* Adds border radius on hover */
+  border-color: #ffffff;
+}
+
+/* Responsive adjustment */
+@media (max-width: 768px) {
+  #background-side {
+    display: none;
+  }
+
+  #content-side {
+    width: 100%;
+    height: 100vh;
+    border-radius: 0;
+  }
 }

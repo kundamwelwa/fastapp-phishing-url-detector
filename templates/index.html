@@ -1,70 +1,138 @@
 {% extends "base.html" %}
 {% block title %}Home Page{% endblock %}
 {% block content %}
-<div class="d-flex flex-column align-items-center mt-5">
-    <!-- Modal for Results -->
-    <div class="modal fade" id="myModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h1 class="modal-title fs-5" id="staticBackdropLabel">RESULTS</h1>
-                </div>
-                <div class="modal-body text-center" id="modal-body">
-                    <!-- Result Content Goes Here -->
-                </div>
-                <div class="modal-footer">
-                    <button id="modal-close-btn" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- URL Detection Card -->
-    <div class="card shadow-lg p-4 mt-4" style="max-width: 600px; width: 100%; border-radius: 10px;">
-        <h3 class="text-center mb-4" style="font-family: 'Poppins', sans-serif; color: #343a40;">Enter a Link to Get Started</h3>
-        <div class="row g-3">
-            <div class="col-12">
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
-                    <input class="form-control" type="text" name="url" id="url" required placeholder="Enter website link" />
+<style>
+    .main-container {
+        display: flex;
+        height: 100vh;
+    }
+
+    /* Left side for detection card */
+    .card-side {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #f8f9fa;
+        flex: 1;
+        padding: 2rem;
+    }
+
+    /* Detection card styling */
+    .card-container {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        padding: 2rem;
+        max-width: 600px;
+        width: 100%;
+    }
+
+    /* Right side for the background image */
+    .background-side {
+        background: linear-gradient(to right, rgba(235, 235, 235, 0.7), rgba(0, 123, 240, 0.7)), 
+              url('/static/resources/Phishing-Cover-Image.png'); /* Path to your background image */
+        background-size: cover;
+        background-position: center;
+        flex: 1;
+    }
+
+    /* Result messages styling */
+    .result-success, .result-warning, .result-error {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem;
+        border-radius: 8px;
+        font-size: 1.1rem;
+    }
+
+    .result-success {
+        background-color: rgba(40, 167, 69, 0.2);
+        color: #28a745;
+    }
+
+    .result-warning {
+        background-color: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+    }
+
+    .result-error {
+        background-color: rgba(220, 53, 69, 0.2);
+        color: #dc3545;
+    }
+
+    .progress-bar {
+        transition: width 1s ease-in-out;
+    }
+
+    /* Responsive adjustment for mobile */
+    @media (max-width: 768px) {
+        .main-container {
+            flex-direction: column;
+        }
+
+        .background-side {
+            height: 50vh;
+        }
+    }
+</style>
+
+<div class="main-container">
+    <!-- Left side with detection card -->
+    <div class="card-side">
+        <div class="card-container">
+            <h3 class="text-center mb-4" style="font-family: 'Poppins', sans-serif; color: #343a40;">Enter a Link to Get Started</h3>
+            <form id="url-detection-form">
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
+                        <input class="form-control" type="text" name="url" id="url" required placeholder="Enter website link" />
+                    </div>
                 </div>
-            </div>
-            <div class="col-12 text-center">
-                <button type="button" class="btn btn-primary w-100" id="detect">Detect</button>
-            </div>
-            <div class="col-12 text-center mt-2">
+                <button type="button" class="btn btn-primary w-100 mb-2" id="detect">Detect</button>
                 <button type="button" class="btn btn-secondary w-100" id="clear">Clear</button>
+            </form>
+
+            <!-- Progress and Spinner -->
+            <div id="progress" class="mt-4">
+                <div class="progress" role="progressbar" aria-label="Detection progress" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100">
+                    <div id="progress-bar" class="progress-bar progress-bar-striped" style="width: 10%;"></div>
+                </div>
+                <div class="spinner-border text-primary mt-3" role="status" id="spinner" style="display: none;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+
+            <!-- HTTPS Warning -->
+            <div id="https-warning" class="alert alert-warning mt-3 result-warning" style="display: none;">
+                <i class="bi bi-exclamation-triangle-fill"></i> This URL is not HTTPS secure.
+            </div>
+
+            <!-- SSL Error -->
+            <div id="ssl-error" class="alert alert-danger mt-3 result-error" style="display: none;">
+                <i class="bi bi-exclamation-triangle-fill"></i> SSL Error: Invalid certificate.
+            </div>
+
+            <!-- Modal for Results -->
+            <div class="modal fade" id="myModal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="resultModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title fs-5" id="resultModalLabel">Results</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center" id="modal-body">
+                            <!-- Results will display here -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <div id="progress" class="mt-4">
-            <div class="progress" role="progressbar" aria-label="Detection progress" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100">
-                <div id="progress-bar" class="progress-bar progress-bar-striped progress" style="width: 10%;"></div>
-            </div>
-            <div class="spinner-border text-primary mt-3" role="status" id="spinner" style="display: none;">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
     </div>
 
-    <!-- HTTPS Warning Section -->
-    <div id="https-warning" class="alert alert-warning mt-4" role="alert" style="display: none;">
-        <i class="bi bi-exclamation-triangle-fill"></i> Note: The URL is not HTTPS secure (HTTP).
-    </div>
-
-    <div id="ssl-error" class="alert alert-danger mt-4" role="alert" style="display: none;">
-        <i class="bi bi-exclamation-triangle-fill"></i> SSL Error: The site has an invalid certificate.
-    </div>
-
-    <!-- History Section -->
-    <div class="card mt-5" style="max-width: 600px; width: 100%; border-radius: 10px;">
-        <div class="card-header text-center">
-            <h4 style="font-family: 'Poppins', sans-serif; color: #343a40;">Recent Checks</h4>
-        </div>
-        <ul class="list-group list-group-flush" id="recent-checks">
-            <!-- Recent URL checks will be appended here -->
-        </ul>
-    </div>
+    <!-- Right side with background image -->
+    <div class="background-side"></div>
 </div>
 
 <script>
@@ -72,126 +140,66 @@
     const detectBtn = document.getElementById("detect");
     const clearBtn = document.getElementById("clear");
     const modalBody = document.getElementById("modal-body");
-    const modalCloseBtn = document.getElementById("modal-close-btn");
     const inputValue = document.getElementById("url");
     const progressBar = document.getElementById("progress-bar");
-    const progress = document.querySelectorAll(".progress");
     const spinner = document.getElementById("spinner");
     const httpsWarning = document.getElementById("https-warning");
     const sslError = document.getElementById("ssl-error");
-    const recentChecks = document.getElementById("recent-checks");
-  
-    function displayProgress(value) {
-        progress.forEach((i) => {
-            if (value) i.style.display = "flex";
-            else i.style.display = "none";
-        });
-        spinner.style.display = value ? "block" : "none";
-    }
-  
+
     function simulateProgress() {
-        progressBar.style.width = "10%";
-        setTimeout(() => progressBar.style.width = "30%", 500);
-        setTimeout(() => progressBar.style.width = "60%", 1000);
-        setTimeout(() => progressBar.style.width = "80%", 1500);
-        setTimeout(() => progressBar.style.width = "100%", 2000);
+        progressBar.style.width = "30%";
+        setTimeout(() => progressBar.style.width = "60%", 800);
+        setTimeout(() => progressBar.style.width = "100%", 1600);
     }
-  
+
     async function detectUrl(url) {
         try {
             const response = await axios.get("http://127.0.0.1:8000/detect/", { params: { url: url } });
             return response.data;
         } catch (error) {
-            console.error("Error during detection:", error);
+            console.error("Error:", error);
             return null;
         }
     }
-  
-    function isValidUrl(url) {
-        const urlRegex = /^(https?:\/\/)?([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(:[0-9]{1,5})?(\/.*)?$/;
-        return urlRegex.test(url);
+
+    function displayResultMessage(message, isPhishing) {
+        const resultClass = isPhishing ? "result-error" : "result-success";
+        modalBody.innerHTML = `<div class="${resultClass}"><i class="bi ${isPhishing ? "bi-x-circle" : "bi-check-circle"}"></i> ${message}</div>`;
+        myModal.show();
     }
-  
-    function checkHttps(url) {
-        return url.startsWith("https://");
-    }
-  
-    function addToRecentChecks(url, result) {
-        const listItem = document.createElement("li");
-        listItem.className = "list-group-item";
-        listItem.innerHTML = `<strong>${url}</strong>: ${result}`;
-        recentChecks.prepend(listItem);
-    }
-  
-    displayProgress(false);
-  
+
     detectBtn.onclick = async function () {
         const input = inputValue.value.trim();
-        if (!input || !isValidUrl(input)) {
-            modalBody.innerHTML = `<div class="text-danger">⚠️ Please enter a valid URL.</div>`;
-            myModal.show();
+        if (!input) {
+            displayResultMessage("⚠️ Please enter a valid URL.", true);
             return;
         }
-    
-        displayProgress(true);
+
         simulateProgress();
-    
-        // Reset warnings
-        httpsWarning.style.display = "none";
-        sslError.style.display = "none";
-    
-        // Check if URL is HTTPS and show warning if not
-        const isHttps = checkHttps(input);
-        if (!isHttps) {
-            httpsWarning.style.display = "block";
-        }
-    
-        // Proceed with phishing detection only for valid URLs
+        spinner.style.display = "block";
+
+        httpsWarning.style.display = !input.startsWith("https://") ? "block" : "none";
+
         const result = await detectUrl(input);
-    
+
         if (result) {
             const isPhishing = result === "phishing";
-            const sslErrorDetected = result.ssl_error || false; // Assuming your API returns an SSL error flag
-    
-            // Display phishing detection results
-            if (sslErrorDetected) {
-                sslError.style.display = "block";
-                modalBody.innerHTML = `<div class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Warning: This site has an invalid certificate.</div>
-                                       <p>Please avoid interacting with this site.</p>`;
-            } else if (!isHttps) {
-                modalBody.innerHTML = `<div class="text-warning"><i class="bi bi-exclamation-triangle-fill"></i> Note: The URL is not HTTPS secure (HTTP).</div>
-                                       <p>Please avoid interacting with this site.</p>`;
-            } else {
-                modalBody.innerHTML = isPhishing
-                    ? `<div class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Warning: This is a phishing site!</div>
-                       <p>This site has been flagged as suspicious. Please avoid interacting with it.</p>`
-                    : `<div class="text-success"><i class="bi bi-shield-check"></i> This site is legitimate.</div>
-                       <a href="${input}" target="_blank" class="btn btn-primary mt-3">Visit Site</a>
-                       <p>This site appears to be legitimate. Proceed with caution and ensure security practices.</p>`;
-            }
-    
-            progressBar.classList.add(isPhishing ? "bg-danger" : "bg-success");
-            addToRecentChecks(input, result);
+            const message = isPhishing ? "This is a phishing site. Please avoid it." : "This site is legitimate.";
+            displayResultMessage(message, isPhishing);
         } else {
-            modalBody.innerHTML = `<div class="text-danger">⚠️ An error occurred. Please try again.</div>`;
+            displayResultMessage("⚠️ An error occurred. Please try again.", true);
         }
-    
-        displayProgress(false);
-        myModal.show();
+
+        progressBar.style.width = "10%";
+        spinner.style.display = "none";
     };
-    
-  
+
     clearBtn.onclick = function () {
         inputValue.value = "";
+        progressBar.style.width = "10%";
         httpsWarning.style.display = "none";
         sslError.style.display = "none";
-        progressBar.style.width = "10%";
-        progressBar.classList.remove("bg-danger", "bg-success");
-    };
-  
-    modalCloseBtn.onclick = function () {
-        clearBtn.click();
     };
 </script>
-  
+
 {% endblock %}
