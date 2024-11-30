@@ -31,7 +31,7 @@
     /* Right side for the background image */
     .background-side {
         background: linear-gradient(to right, rgba(235, 235, 235, 0.7), rgba(0, 123, 240, 0.7)), 
-              url('/static/resources/Phishing-Cover-Image.png'); /* Path to your background image */
+              url('/static/resources/Phishing-Cover-Image.png'); 
         background-size: cover;
         background-position: center;
         flex: 1;
@@ -64,6 +64,12 @@
 
     .progress-bar {
         transition: width 1s ease-in-out;
+    }
+
+    /* Report modal styling */
+    .report-modal {
+        max-height: 400px;
+        overflow-y: auto;
     }
 
     /* Responsive adjustment for mobile */
@@ -128,6 +134,24 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Report Generation Button -->
+            <button class="btn btn-info w-100 mt-4" id="generate-report">Generate Report</button>
+
+            <!-- Report Modal -->
+            <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title fs-5" id="reportModalLabel">URL Report</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body report-modal" id="report-body">
+                            <!-- Report content will display here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -137,69 +161,144 @@
 
 <script>
     const myModal = new bootstrap.Modal("#myModal", { keyboard: false });
+    const reportModal = new bootstrap.Modal("#reportModal", { keyboard: false });
     const detectBtn = document.getElementById("detect");
     const clearBtn = document.getElementById("clear");
+    const generateReportBtn = document.getElementById("generate-report");
     const modalBody = document.getElementById("modal-body");
+    const reportBody = document.getElementById("report-body");
     const inputValue = document.getElementById("url");
     const progressBar = document.getElementById("progress-bar");
     const spinner = document.getElementById("spinner");
     const httpsWarning = document.getElementById("https-warning");
     const sslError = document.getElementById("ssl-error");
 
+    // Simulate progress bar update
     function simulateProgress() {
         progressBar.style.width = "30%";
         setTimeout(() => progressBar.style.width = "60%", 800);
         setTimeout(() => progressBar.style.width = "100%", 1600);
     }
 
-    async function detectUrl(url) {
-        try {
-            const response = await axios.get("http://127.0.0.1:8000/detect/", { params: { url: url } });
-            return response.data;
-        } catch (error) {
-            console.error("Error:", error);
-            return null;
+    // Sanitize URL to handle special characters
+    function sanitizeUrl(url) {
+        return encodeURI(url); // Ensure the URL is properly encoded
+    }
+
+    // Validate URL format
+    function isValidUrl(url) {
+        const regex = /^(https?:\/\/)?([a-z0-9-]+\.)+[a-z]{2,6}(\/[a-z0-9-._~:/?#[\]@!$&'()*+,;=]*)?$/i;
+        return regex.test(url);
+    }
+
+    // Retry mechanism for requests
+    async function retryRequest(url, retries = 3, delay = 1000) {
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await axios.post("http://127.0.0.1:8000/detect/", 
+                    { url: url }, 
+                    { 
+                        headers: { 'Content-Type': 'application/json' },
+                        timeout: 10000 // Set appropriate timeout
+                    }
+                );
+                return response.data;
+            } catch (error) {
+                console.error(`Attempt ${i + 1} failed:`, error);
+                if (i < retries - 1) {
+                    await new Promise(resolve => setTimeout(resolve, delay)); // Delay before retrying
+                } else {
+                    return null; // Return null if all retries fail
+                }
+            }
         }
     }
 
-    function displayResultMessage(message, isPhishing) {
-        const resultClass = isPhishing ? "result-error" : "result-success";
-        modalBody.innerHTML = `<div class="${resultClass}"><i class="bi ${isPhishing ? "bi-x-circle" : "bi-check-circle"}"></i> ${message}</div>`;
-        myModal.show();
+    // Function to check HTTPS and SSL
+    function handleHttpsAndSsl(result) {
+        // Reset visibility of warnings/errors
+        httpsWarning.style.display = "none";
+        sslError.style.display = "none";
+
+        // HTTPS check
+        if (!result.is_https) {
+            httpsWarning.style.display = "block";
+        }
+
+        // SSL error check
+        if (result.ssl_error) {
+            sslError.style.display = "block";
+        }
     }
 
-    detectBtn.onclick = async function () {
-        const input = inputValue.value.trim();
-        if (!input) {
-            displayResultMessage("⚠️ Please enter a valid URL.", true);
+    // Handle detect button click event
+    detectBtn.addEventListener("click", async () => {
+        const url = sanitizeUrl(inputValue.value.trim());
+        if (!url || !isValidUrl(url)) {
+            alert("Please enter a valid URL.");
             return;
         }
 
-        simulateProgress();
+        // Show progress and spinner
         spinner.style.display = "block";
+        simulateProgress();
 
-        httpsWarning.style.display = !input.startsWith("https://") ? "block" : "none";
-
-        const result = await detectUrl(input);
+        // Retry request for detecting URL
+        const result = await retryRequest(url);
 
         if (result) {
-            const isPhishing = result === "phishing";
-            const message = isPhishing ? "This is a phishing site. Please avoid it." : "This site is legitimate.";
-            displayResultMessage(message, isPhishing);
+            spinner.style.display = "none";
+
+            // Handle HTTPS and SSL checks
+            handleHttpsAndSsl(result);
+
+            // Check if the website is legitimate or phishing
+            if (result.is_phishing) {
+                modalBody.innerHTML = `<div class="result-error"><i class="bi bi-x-circle-fill"></i> Phishing Website Detected</div>`;
+            } else {
+                modalBody.innerHTML = `<div class="result-success"><i class="bi bi-check-circle-fill"></i> Legitimate Website</div>`;
+            }
+
+            // Show modal with result
+            myModal.show();
         } else {
-            displayResultMessage("⚠️ An error occurred. Please try again.", true);
+            spinner.style.display = "none";
+            modalBody.innerHTML = `<div class="result-error"><i class="bi bi-x-circle-fill"></i> Error in detecting the website. Please try again later.</div>`;
+            myModal.show();
+        }
+    });
+
+    // Handle report generation
+    generateReportBtn.addEventListener("click", async () => {
+        // Show loading spinner or placeholder
+        reportBody.innerHTML = `<div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>`;
+
+        try {
+            const response = await axios.post("http://127.0.0.1:8000/report/", {}, {
+                headers: { 'Content-Type': 'application/json' },
+                timeout: 10000
+            });
+
+            if (response.data.success) {
+                const reportContent = response.data.message; // Adjust based on API structure
+                reportBody.innerHTML = `<h5>Your Report:</h5><pre>${reportContent}</pre>`;
+            } else {
+                reportBody.innerHTML = `<div class="result-error"><i class="bi bi-x-circle-fill"></i> ${response.data.message}</div>`;
+            }
+        } catch (error) {
+            console.error("Error generating report:", error);
+            reportBody.innerHTML = `<div class="result-error"><i class="bi bi-x-circle-fill"></i> Failed to generate report. Please try again later.</div>`;
         }
 
-        progressBar.style.width = "10%";
-        spinner.style.display = "none";
-    };
+        reportModal.show();
+    });
 
-    clearBtn.onclick = function () {
+    // Clear input field
+    clearBtn.addEventListener("click", () => {
         inputValue.value = "";
-        progressBar.style.width = "10%";
         httpsWarning.style.display = "none";
         sslError.style.display = "none";
-    };
+    });
 </script>
 
 {% endblock %}

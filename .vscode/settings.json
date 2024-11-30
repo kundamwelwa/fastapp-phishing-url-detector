@@ -7,8 +7,13 @@
     "sqltools.connections": [],
     "cSpell.words": [
         "aipredictor",
+        "axios",
         "fastapi",
         "iframe",
+        "Kellycoding",
+        "rgba",
+        "sessionmaker",
+        "whois",
         "xgboost"
     ]
 }

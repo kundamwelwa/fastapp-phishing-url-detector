@@ -20,13 +20,17 @@ async def predict_url(url: str) -> str:
 
         # Extract features and reshape for prediction
         feature = featureExtraction(url)
+        if not feature or len(feature) == 0:
+            return "Feature extraction failed!"
+
         reshape_feature = np.reshape(feature, (1, -1))
 
         # Predict phishing or legitimate
         prediction = model.predict(reshape_feature)
 
-        return "phishing" if prediction[1] == 0 else "legitimate"
+        # Correcting prediction index to match the expected output
+        return "phishing" if prediction[0] == 0 else "legitimate"
     
     except Exception as e:
         print(f"Error in prediction: {e}")
-        return "An error occurred during prediction!"
+        return f"An error occurred during prediction: {e}"

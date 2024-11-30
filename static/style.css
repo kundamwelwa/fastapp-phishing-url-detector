@@ -1,49 +1,59 @@
 /* Background side styling */
 #background-side {
-  background: linear-gradient(to right, hsla(196, 100%, 61%, 0.6), rgba(157, 157, 157, 0.5)), 
-              url('./resources/Phishing-Cover-Image.png'); /* Replace with your image path */
+  background: url('./resources/background.jpg'); /* Replace with your image path */
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
   height: 100vh;
-  width: 50vw;
+  width: 100vw; /* Cover the entire screen */
 }
 
 /* Content side styling */
 #content-side {
-  background-color: rgba(161, 215, 242, 0.95);
+  background-color: rgba(255, 255, 255, 0); /* Slightly transparent white for better readability */
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Header and Navigation styling */
+.custom-navbar {
+  background-color: rgba(2, 21, 38, 0.6); /* Transparent dark background for navbar */
+  position: fixed;
+  width: 100%;
+  z-index: 9999;
+  top: 0;
+  left: 0;
+  backdrop-filter: blur(10px); /* Optional: Adds blur effect behind navbar */
+}
+
 .custom-header-title {
   font-family: 'Poppins', sans-serif;
-  color: #021526; /* Dark blue color */
+  color: #ffffff; /* White for better visibility on the transparent background */
   font-weight: bold;
   font-size: 1.8rem;
 }
 
 .text-dark-blue {
-  color: #021526; /* Dark blue for the welcome message */
+  color: hsl(0, 0%, 100%); /* Dark blue for the welcome message */
 }
 
 .nav-link, .btn-outline-primary {
   font-weight: 500;
+  color: #ffffff;
 }
 
 /* Custom Button Styling */
 .btn-dark-blue {
-  background-color: #021526; /* Dark blue */
+  background-color: #ffffff; /* Dark blue */
   color: #ffffff;
   border: none;
   transition: border-radius 0.3s ease, background-color 0.3s ease;
 }
 
 .btn-dark-blue:hover {
-  background-color: #01213a; /* Darker shade of blue for hover effect */
-  color: #ffffff;
+  background-color: hsl(0, 0%, 100%); /* Darker shade of blue for hover effect */
+  color: hsl(0, 0%, 100%);
   border-radius: 8px; /* Adds border radius on hover */
   border-color: #ffffff;
 }
@@ -58,5 +68,9 @@
     width: 100%;
     height: 100vh;
     border-radius: 0;
+  }
+
+  .custom-navbar {
+    background-color: rgba(2, 21, 38, 0.8); /* Slightly more transparent on smaller screens */
   }
 }
