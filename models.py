@@ -1,9 +1,9 @@
-from sqlalchemy import Column, Integer, String, Enum, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Enum, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from database import Base
 import enum
 
-# Define roles as an Enum (Updated to match database case)
+# Define roles as an Enum
 class Roles(str, enum.Enum):
     USER = "USER"  # Uppercase
     ADMIN = "ADMIN"  # Uppercase
@@ -28,8 +28,11 @@ class Report(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    site_url = Column(String, nullable=False)
+    site_url = Column(String, nullable=False, index=True)  # Optional indexing
     is_phishing = Column(Boolean, nullable=False, default=False)
 
     # Relationship back to User model
     user = relationship("User", back_populates="reports")
+
+    # Adding a unique constraint to ensure that a user can't have more than one report for a particular URL
+    __table_args__ = (UniqueConstraint('user_id', 'site_url', name='_user_siteurl_uc'),)

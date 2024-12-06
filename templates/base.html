@@ -9,6 +9,56 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+    <style>
+      /* Custom Styles */
+      .custom-navbar {
+        background-color: #021526; /* Deep blue for the navbar */
+        color: white;
+      }
+
+      .custom-header-title {
+        font-size: 2.2rem;
+        color: #66b2ff; /* Light blue */
+        font-weight: bold;
+      }
+
+      .nav .nav-link,
+      .nav .btn {
+        color: white;
+        transition: background-color 0.3s, color 0.3s;
+      }
+
+      .nav .btn {
+        background-color: #66b2ff; /* Light blue for buttons */
+        border: none;
+        padding: 0.5rem 1rem;
+        font-weight: bold;
+        border-radius: 5px;
+      }
+
+      .nav .btn:hover {
+        background-color: #4a9edf; /* Slightly darker blue on hover */
+        color: white;
+      }
+
+      .nav .nav-link.text-#021526 {
+        color: #66b2ff; /* Light blue for logged-in username */
+        font-weight: bold;
+      }
+
+      body {
+        background-color: #f4f4f4;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+
+      #background-side {
+        padding: -10px;
+      }
+
+   
+    </style>
     <title>{% block title %}Phishing Detection{% endblock %}</title>
   </head>
   <body>
@@ -25,14 +75,14 @@
               <span class="nav-link text-#021526">Welcome, <strong>{{ current_user.username }}</strong></span>
             </li>
             <li class="nav-item">
-              <a class="btn btn-white" href="/logout"><i class="bi bi-box-arrow-right"></i> Logout</a>
+              <a class="btn" href="/logout"><i class="bi bi-box-arrow-right"></i> Logout</a>
             </li>
             {% else %}
             <li class="nav-item">
-              <a class="btn btn-white ms-2" href="/login"><i class="bi bi-person"></i> Login</a>
+              <a class="btn ms-2" href="/login"><i class="bi bi-person"></i> Login</a>
             </li>
             <li class="nav-item">
-              <a class="btn btn-white ms-2" href="/register"><i class="bi bi-person-plus"></i> Register</a>
+              <a class="btn ms-2" href="/register"><i class="bi bi-person-plus"></i> Register</a>
             </li>
             {% endif %}
           </ul>

@@ -6,6 +6,7 @@ from starlette.responses import RedirectResponse, JSONResponse
 from starlette.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from urllib.parse import urlparse
 from models import Report
 from report_repo import ReportRepo
@@ -151,60 +152,99 @@ def logout(resp: Response, request: Request):
         return resp
 
 @app.post("/detect/")
-async def detect_url(detect_request: DetectRequest):
+async def detect_url(request: Request, detect_request: DetectRequest, db: Session = Depends(get_db)):
     url = detect_request.url
 
+    # Validate the URL format
     if not is_valid_url(url):
         raise HTTPException(status_code=400, detail="Invalid URL format.")
     
     try:
-        # Debugging: Print/log the incoming URL
         print(f"Processing URL: {url}")
 
+        # Call the model to get prediction results
         result = await predict_url(url)
-        
-        # Validate result structure
-        print(f"Predict URL result: {result}")  # Debugging
-        if not isinstance(result, dict):
-            raise HTTPException(status_code=500, detail="Invalid response format from predict_url.")
 
-        if "features" not in result or "is_phishing" not in result:
-            raise HTTPException(status_code=500, detail="Missing required keys in predict_url response.")
+        # Validate the result format
+        if not isinstance(result, dict) or "features" not in result or "is_phishing" not in result:
+            raise HTTPException(status_code=500, detail="Invalid response from predict_url.")
         
-        # Ensure feature count matches expected input for the model
+        # Validate the feature count
         feature_count = len(result.get("features", []))
-        if feature_count != 16:  # Replace 16 with your model's expected feature count
+        if feature_count != 16:
             raise ValueError(f"Feature count mismatch! Expected 16, got {feature_count}")
-        
-        # Interpret the prediction result
-        is_phishing = result.get("is_phishing", False)
-        if isinstance(is_phishing, list) and len(is_phishing) == 1:
-            is_phishing = bool(is_phishing[0])
 
-        result_message = "phishing" if is_phishing else "legitimate"
+        # Convert is_phishing to a boolean value
+        is_phishing = bool(result.get("is_phishing", [False])[0]) if isinstance(result.get("is_phishing"), list) else result.get("is_phishing", False)
 
-        # Get HTTPS/SSL details from the prediction result
+        # Extract additional HTTPS/SSL details
         is_https = result.get("is_https", False)
         ssl_error = result.get("ssl_error", False)
 
+        # Retrieve user authentication details
+        cookie_token = get_cookies(request)
+        if not cookie_token:
+            raise HTTPException(status_code=401, detail="Unauthorized: Missing cookie token")
+
+        current_user = await get_current_user(db, cookie_token)
+        if not current_user:
+            raise HTTPException(status_code=401, detail="User not found or unauthorized")
+
+        user_id = current_user.id
+
+        # Check if the URL has been reported before by the current user
+        existing_report = db.query(Report).filter(Report.site_url == url, Report.user_id == user_id).first()
+
+        if existing_report:
+            # If the same user has already reported the URL, return the previous result
+            return JSONResponse(content={
+                "success": True,
+                "url": url,
+                "result": "phishing" if existing_report.is_phishing else "legitimate",
+                "is_phishing": existing_report.is_phishing,
+                "is_https": is_https,
+                "ssl_error": ssl_error,
+                "existing_report": True,
+                "previous_result": "phishing" if existing_report.is_phishing else "legitimate"
+            })
+
+        # If the URL is reported by a different user, insert a new report
+        new_report = Report(user_id=user_id, site_url=url, is_phishing=is_phishing)
+
+        try:
+            db.add(new_report)
+            db.commit()
+            db.refresh(new_report)
+            print(f"Successfully added report for URL: {url} by user {user_id}")
+        except IntegrityError as e:
+            db.rollback()
+            print(f"Integrity error occurred while adding URL: {url} for user {user_id}, Error: {e}")
+            raise HTTPException(status_code=400, detail="Error inserting new report.")
+
+        # Return response for the newly added report
         return JSONResponse(content={
             "success": True,
             "url": url,
-            "result": result_message,
+            "result": "phishing" if is_phishing else "legitimate",
             "is_phishing": is_phishing,
-            "is_https": is_https,  # Add HTTPS info
-            "ssl_error": ssl_error  # Add SSL error info
+            "is_https": is_https,
+            "ssl_error": ssl_error,
+            "existing_report": False
         })
-    
+
     except Exception as e:
-        # Log detailed errors for debugging
         print(f"Error during URL detection: {e}")
         raise HTTPException(status_code=500, detail=f"Error during URL detection: {str(e)}")
 
 
 
+
+
+
 # Generate user report
-@app.post("/report/")  
+from sqlalchemy.sql import func
+
+@app.post("/report/")
 async def request_report(request: Request, db: Session = Depends(get_db)):
     """
     Generate a report for the logged-in user and send it via email.
@@ -226,56 +266,59 @@ async def request_report(request: Request, db: Session = Depends(get_db)):
     if not current_user:
         return {"success": False, "message": "User not found or unauthorized"}
 
-    # Fetch user's reports from the database
     try:
-        reports = ReportRepo(db).get_reports_by_user(current_user.id)
+        # Fetch user's reports from the database
+        reports = db.query(Report).filter(Report.user_id == current_user.id).all()
     except Exception as db_error:
-        print(f"Database error: {db_error}")  # Logging for debugging
+        print(f"Database error: {db_error}")
         raise HTTPException(status_code=500, detail="Failed to retrieve user reports.")
 
     # Check if reports exist
     if not reports:
         return {"success": False, "message": "No reports found for this user."}
 
-    # Prepare report content: Separate phishing and legitimate URLs
-    phishing_urls = []
-    legitimate_urls = []
+    # Categorize reports into phishing and legitimate URLs
+    phishing_urls = [report.site_url for report in reports if report.is_phishing]
+    legitimate_urls = [report.site_url for report in reports if not report.is_phishing]
 
-    for report in reports:
-        url_info = {
-            "url": report.site_url,
-            "status": 'Phishing' if report.is_phishing == 'yes' else 'Legitimate'
-        }
-        if report.is_phishing == 'yes':
-            phishing_urls.append(url_info)
-        else:
-            legitimate_urls.append(url_info)
+    # Get counts
+    phishing_count = len(phishing_urls)
+    legitimate_count = len(legitimate_urls)
 
     # Construct the report content
     report_content = (
         f"Phishing Detection Report\n\n"
         f"User: {current_user.username}\n"
         f"Email: {current_user.email}\n\n"
+        f"Summary:\n"
+        f"- Total URLs detected: {phishing_count + legitimate_count}\n"
+        f"- Phishing URLs: {phishing_count}\n"
+        f"- Legitimate URLs: {legitimate_count}\n\n"
+        f"Details:\n\n"
         f"Phishing URLs:\n" +
-        ("\n".join([f"{url['url']} - {url['status']}" for url in phishing_urls]) if phishing_urls else "None") +
+        ("\n".join(phishing_urls) if phishing_urls else "None") +
         f"\n\nLegitimate URLs:\n" +
-        ("\n".join([f"{url['url']} - {url['status']}" for url in legitimate_urls]) if legitimate_urls else "None")
+        ("\n".join(legitimate_urls) if legitimate_urls else "None")
     )
 
     # Send the report via email
     try:
         send_email_with_report(
             to_email=current_user.email,
-            report_content=report_content
+            report_content=report_content,
+            phishing_count=phishing_count,
+            legitimate_count=legitimate_count,
+            phishing_urls=phishing_urls,  # Pass phishing URLs
+            legitimate_urls=legitimate_urls  # Pass legitimate URLs
         )
     except HTTPException as email_error:
-        print(f"Email sending error: {email_error.detail}")  # Log email errors
+        print(f"Email sending error: {email_error.detail}")
         return {
             "success": False,
             "message": "Failed to send the report email. Please try again later."
         }
     except Exception as general_error:
-        print(f"Unexpected error during email sending: {general_error}")  # Log unexpected errors
+        print(f"Unexpected error during email sending: {general_error}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred while sending the email.")
 
     # Return success response
@@ -283,4 +326,3 @@ async def request_report(request: Request, db: Session = Depends(get_db)):
         "success": True,
         "message": "Report generated and sent to your email successfully."
     }
-

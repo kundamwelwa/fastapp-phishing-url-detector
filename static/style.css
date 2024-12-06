@@ -1,9 +1,9 @@
 /* Background side styling */
 #background-side {
-  background: url('./resources/background.jpg'); /* Replace with your image path */
+  background: url('./resources/background1.jpg'); /* Replace with your image path */
   background-repeat: no-repeat;
   background-size: cover;
-  background-position: center;
+  background-position: flex;
   height: 100vh;
   width: 100vw; /* Cover the entire screen */
 }
@@ -12,7 +12,7 @@
 #content-side {
   background-color: rgba(255, 255, 255, 0); /* Slightly transparent white for better readability */
   border-radius: 8px;
-  padding: 20px;
+  padding: 0px;
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
 }
 
